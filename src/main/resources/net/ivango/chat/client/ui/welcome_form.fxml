@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+
+
+<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="259.0" prefWidth="462.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <Button fx:id="connectButton" layoutX="182.0" layoutY="196.0" mnemonicParsing="false" text="Connect">
+         <font>
+            <Font name="Verdana" size="16.0" />
+         </font>
+      </Button>
+      <Label layoutX="29.0" layoutY="94.0" text="User name:">
+         <font>
+            <Font name="Verdana" size="16.0" />
+         </font>
+      </Label>
+      <Label layoutX="29.0" layoutY="148.0" text="Server address:">
+         <font>
+            <Font name="Verdana" size="16.0" />
+         </font>
+      </Label>
+      <Label layoutX="113.0" layoutY="39.0" text="Welcome to the chat client!">
+         <font>
+            <Font name="Verdana Bold" size="18.0" />
+         </font>
+      </Label>
+      <TextField fx:id="userNameLabel" layoutX="176.0" layoutY="89.0" prefHeight="26.0" prefWidth="258.0" promptText="enter your user name">
+         <font>
+            <Font name="Verdana" size="16.0" />
+         </font>
+      </TextField>
+      <TextField fx:id="serverAdressLabel" layoutX="176.0" layoutY="143.0" prefHeight="26.0" prefWidth="258.0" promptText="enter address to connect to" text="localhost:8989">
+         <font>
+            <Font name="Verdana" size="16.0" />
+         </font>
+      </TextField>
+   </children>
+</Pane>
