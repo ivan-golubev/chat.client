@@ -12,6 +12,7 @@ import net.ivango.chat.client.misc.SendMessageCallback;
 import net.ivango.chat.client.misc.UserListUpdateCallback;
 import net.ivango.chat.common.responses.User;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainFormController implements UserListUpdateCallback, IncomingMessageCallback {
@@ -33,11 +34,18 @@ public class MainFormController implements UserListUpdateCallback, IncomingMessa
 
     private ObservableList<String> messages = FXCollections.observableArrayList();
 
+    private class BroadCastUser extends User {
+        private BroadCastUser() {
+            super("Everyone", "255.255.255.255");
+        }
+    }
+
     public void initialize (SendMessageCallback callback) {
         this.callback = callback;
         this.textArea.setOnKeyPressed(ke -> {
             if (ke.getCode().equals(KeyCode.ENTER)) {
                 sendMessage();
+                ke.consume();
             }
         });
 
@@ -70,28 +78,46 @@ public class MainFormController implements UserListUpdateCallback, IncomingMessa
         activeUsersList.setItems(FXCollections.observableList(users));
 
         User currentValue = receiverComboBox.getValue();
-        receiverComboBox.setItems(FXCollections.observableList(users));
+        ObservableList<User> observable = FXCollections.observableList(new ArrayList<>(users));
+        observable.add(new BroadCastUser());
+        receiverComboBox.setItems(observable);
         if (currentValue != null && users.contains(currentValue)) {
             receiverComboBox.setValue(currentValue);
         }
     }
 
-    private void addOwnMessage(String message) {
-        messages.add("Me: " + message);
+    private void addOwnMessage(String message, boolean broadcast) {
+        if (broadcast) {
+            messages.add("Me to all: " + message);
+        } else {
+            messages.add("Me: " + message);
+        }
     }
 
     private void sendMessage() {
         String message = textArea.getText();
         User receiver = receiverComboBox.getValue();
-        if (receiver != null && !message.isEmpty()) {
+        if (receiver == null) {
+          receiverComboBox.show();
+        } else if (!message.isEmpty()) {
             textArea.setText("");
-            callback.onSendMessage(receiver.getAddress(), message, false);
-            addOwnMessage(message);
+            if (receiver instanceof BroadCastUser) {
+                callback.onSendMessage("", message, true);
+                addOwnMessage(message, true);
+            } else {
+                callback.onSendMessage(receiver.getAddress(), message, false);
+                addOwnMessage(message, false);
+            }
+
         }
     }
 
     @Override
     public void onMessageReceived(String sender, String message, boolean broadcast) {
-        messages.add(sender + ": " + message);
+        if (broadcast) {
+            messages.add(sender + " to all: " + message);
+        } else {
+            messages.add(sender + ": " + message);
+        }
     }
 }

@@ -152,6 +152,15 @@ public class NetworkController {
         sendJSON(new SendMessageRequest(receiver, message, broadcast));
     }
 
+    public void onApplicationClose() {
+        try {
+            threadPool.shutdownNow();
+            channel.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void initConnection (String userName,
                                 String hostname,
                                 int port,

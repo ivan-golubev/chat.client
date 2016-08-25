@@ -39,7 +39,8 @@
             <Font name="Verdana" size="14.0" />
          </font>
       </Label>
-      <TextArea fx:id="textArea" layoutX="28.0" layoutY="554.0" prefHeight="110.0" prefWidth="401.0" promptText="type message here" />
+      <TextArea fx:id="textArea" layoutX="28.0" layoutY="554.0" prefHeight="110.0" prefWidth="401.0"
+                promptText="type a message here, press Enter to send" />
       <Separator layoutX="41.0" layoutY="115.0" prefHeight="1.0" prefWidth="375.0" />
       <ComboBox fx:id="receiverComboBox" layoutX="102.0" layoutY="513.0" prefHeight="26.0" prefWidth="324.0" promptText="choose the receiver" />
       <Label layoutX="30.0" layoutY="518.0" text="To:">

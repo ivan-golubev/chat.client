@@ -3,10 +3,12 @@ package net.ivango.chat.client;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import net.ivango.chat.client.misc.IncomingMessageCallback;
 import net.ivango.chat.client.misc.SendMessageCallback;
 import net.ivango.chat.client.misc.UserListUpdateCallback;
@@ -39,11 +41,16 @@ public class ClientUI extends Application {
             sendMessageCallback = new SendMessageCallback() {
                 @Override
                 public void onSendMessage(String receiver, String message, boolean broadcast) {
-                    System.out.format("Sending message %s to %s.\n", message, receiver);
+//                    System.out.format("Sending message %s to %s.\n", message, receiver);
                     networkController.sendMessage(receiver, message, broadcast);
                 }
             };
 
+            primaryStage.setOnCloseRequest(t -> {
+                networkController.onApplicationClose();
+                Platform.exit();
+                System.exit(0);
+            });
 
             out.println("Initializing the layout ...");
             Task<Void> task = new Task<Void>(){
