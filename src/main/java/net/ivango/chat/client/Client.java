@@ -1,4 +1,4 @@
-package chat.client;
+package net.ivango.chat.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -8,10 +8,46 @@ import java.nio.channels.CompletionHandler;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import com.google.gson.JsonSyntaxException;
+import net.ivango.chat.common.JSONMapper;
+import net.ivango.chat.common.misc.HandlerMap;
+import net.ivango.chat.common.misc.MessageHandler;
+import net.ivango.chat.common.requests.Message;
+import net.ivango.chat.common.requests.SendMessageRequest;
+import net.ivango.chat.common.responses.GetTimeResponse;
+import net.ivango.chat.common.responses.GetUsersResponse;
+import net.ivango.chat.common.responses.IncomingMessage;
+
 public class Client {
 
     public static final int PORT = 8989;
     private AsynchronousSocketChannel channel;
+
+    private HandlerMap handlerMap = new HandlerMap();
+    private JSONMapper jsonMapper = new JSONMapper();
+
+    private void registerHandlers(){
+        handlerMap.put(GetTimeResponse.class, new MessageHandler<GetTimeResponse>() {
+            @Override
+            public void onMessageReceived(GetTimeResponse getTimeResponse) {
+
+            }
+        });
+
+        handlerMap.put(GetUsersResponse.class, new MessageHandler<GetUsersResponse>() {
+            @Override
+            public void onMessageReceived(GetUsersResponse getUsersResponse) {
+
+            }
+        });
+
+        handlerMap.put(IncomingMessage.class, new MessageHandler<IncomingMessage>() {
+            @Override
+            public void onMessageReceived(IncomingMessage message) {
+                System.out.format("Message from %s received: %s.\n", message.getFrom(), message.getMessage());
+            }
+        });
+    }
 
     class Readhandler implements CompletionHandler<Integer, Void>{
         private AsynchronousSocketChannel socketChannel;
@@ -29,8 +65,20 @@ public class Client {
             // Rewind the input buffer to read from the beginning
 
             inputBuffer.get(buffer);
-            String message = new String(buffer);
-            System.out.println("Received message from the server: " + message);
+            String json = new String(buffer);
+//            System.out.println("Received message from the server: " + message);
+
+            Message message = null;
+            try {
+                message = (Message) jsonMapper.fromJson(json);
+                MessageHandler handler = handlerMap.get(message.getClass());
+                handler.onMessageReceived(message);
+
+            } catch (JsonSyntaxException ie) {
+
+            } catch (ClassNotFoundException e) {
+//                e.printStackTrace();
+            }
 
             socketChannel.read(inputBuffer, null, this);
         }
@@ -47,6 +95,7 @@ public class Client {
         f.get();
 
         System.out.println("client has started: " + channel.isOpen());
+        registerHandlers();
 
         /* registering the read handler */
         ByteBuffer inputBuffer = ByteBuffer.allocate(2048);
@@ -58,7 +107,10 @@ public class Client {
 
         for (String m : messages) {
 
-            ByteBuffer buffer = ByteBuffer.wrap(m.getBytes());
+            Message request = new SendMessageRequest("", m, true);
+            String json = jsonMapper.toJSON(request);
+
+            ByteBuffer buffer = ByteBuffer.wrap(json.getBytes());
             Future result = channel.write(buffer);
 
             while ( !result.isDone() ) {
