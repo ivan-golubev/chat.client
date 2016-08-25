@@ -1,12 +1,10 @@
 package net.ivango.chat.client;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import com.google.gson.JsonSyntaxException;
 import javafx.application.Application;
@@ -14,11 +12,12 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
+import net.ivango.chat.client.misc.WelcomeCallback;
+import net.ivango.chat.client.ui.WelcomeFormController;
 import net.ivango.chat.common.JSONMapper;
 import net.ivango.chat.common.misc.HandlerMap;
 import net.ivango.chat.common.misc.MessageHandler;
 import net.ivango.chat.common.requests.Message;
-import net.ivango.chat.common.requests.SendMessageRequest;
 import net.ivango.chat.common.responses.GetTimeResponse;
 import net.ivango.chat.common.responses.GetUsersResponse;
 import net.ivango.chat.common.responses.IncomingMessage;
@@ -111,6 +110,13 @@ public class Client extends Application {
         }
     }
 
+    WelcomeCallback callback = new WelcomeCallback() {
+        @Override
+        public void onConnectPressed(String userName, String serverAddress) {
+            System.out.format("Connecting %s to %s.\n", userName, serverAddress);
+        }
+    };
+
     private void initRootLayout() {
         try {
             FXMLLoader loader = new FXMLLoader(Client.class.getResource(WELCOME_FORM_VIEW_FXML));
@@ -118,16 +124,20 @@ public class Client extends Application {
 
             Scene scene = new Scene(rootLayout);
 //            scene.getStylesheets().addAll(Main.class.getResource(STYLES_MAIN_CSS).toExternalForm());
-//            primaryStage.setTitle("Remote Constants Editor");
+
+            primaryStage.setTitle("Welcome to chat");
             primaryStage.setScene(scene);
             primaryStage.setResizable(false);
             primaryStage.show();
 
             // Give the controller access to the main app.
-//            this.controller = loader.getController();
+            WelcomeFormController controller = loader.getController();
+            controller.initialize(callback);
+
 //            controller.setMainApp(this, rootPath);
         } catch (IOException e) {
 //            showErrorDialog("Failed to initialize root layout:", e);
+            e.printStackTrace();
         }
     }
 

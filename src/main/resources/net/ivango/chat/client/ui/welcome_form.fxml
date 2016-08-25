@@ -8,9 +8,11 @@
 <?import javafx.scene.layout.*?>
 
 
-<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="259.0" prefWidth="462.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity"
+      prefHeight="259.0" prefWidth="462.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="net.ivango.chat.client.ui.WelcomeFormController">
    <children>
-      <Button fx:id="connectButton" layoutX="182.0" layoutY="196.0" mnemonicParsing="false" text="Connect">
+      <Button fx:id="connectButton" onAction="#connectPressed" layoutX="182.0" layoutY="196.0" mnemonicParsing="false" text="Connect">
          <font>
             <Font name="Verdana" size="16.0" />
          </font>

@@ -1,4 +1,4 @@
-package net.ivango.chat.client.net.ivango.chat.client.ui;
+package net.ivango.chat.client.ui;
 
 
 import javafx.fxml.FXML;
