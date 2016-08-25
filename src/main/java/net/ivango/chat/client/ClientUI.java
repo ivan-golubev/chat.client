@@ -1,6 +1,8 @@
 package net.ivango.chat.client;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
@@ -20,7 +22,8 @@ public class ClientUI extends Application {
 
     private Stage primaryStage;
 
-    private NetworkController networkController = new NetworkController();
+    private NetworkController networkController;
+    private SendMessageCallback sendMessageCallback;
 
     public static final String MAIN_FORM_VIEW_FXML = "ui/main_form.fxml",
                                WELCOME_FORM_VIEW_FXML = "ui/welcome_form.fxml";
@@ -29,8 +32,26 @@ public class ClientUI extends Application {
     public void start(Stage primaryStage) {
         try {
             this.primaryStage = primaryStage;
+
+            networkController = new NetworkController();
+            sendMessageCallback = new SendMessageCallback() {
+                @Override
+                public void onSendMessage(String receiver, String message, boolean broadcast) {
+//            System.out.format("Sending message %s to %s.\n", message, receiver);
+                }
+            };
+
+
             out.println("Initializing the layout ...");
-            initRootLayout();
+            Task<Void> task = new Task<Void>(){
+                @Override
+                protected Void call() throws Exception {
+                    initRootLayout();
+                    return null;
+                }
+            };
+
+            Platform.runLater( task );
         } catch (Exception e) {
 //            showErrorDialog("Failed to initialize application:", e);
         }
@@ -40,24 +61,27 @@ public class ClientUI extends Application {
         @Override
         public void onConnectPressed(String userName, String hostname, int port) {
             primaryStage.hide();
-            System.out.format("Connecting %s to %s.\n", userName, hostname);
-            try {
-                UserListUpdateCallback callback = switchToMainLayout(userName, hostname, port);
-                networkController.initConnection(userName, hostname, port, callback);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    };
 
-    private SendMessageCallback sendMessageCallback = new SendMessageCallback() {
-        @Override
-        public void onSendMessage(String receiver, String message, boolean broadcast) {
-            System.out.format("Sending message %s to %s.\n", message, receiver);
+                Task<Void> task = new Task<Void>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        try {
+                            UserListUpdateCallback callback = switchToMainLayout(userName, hostname, port);
+                            System.out.format("Connecting %s to %s.\n", userName, hostname);
+                            networkController.initConnection(userName, hostname, port, callback);
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } catch (ExecutionException e) {
+                            e.printStackTrace();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                        return null;
+                    }
+                };
+                Platform.runLater(task);
         }
     };
 

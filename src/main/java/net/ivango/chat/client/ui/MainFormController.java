@@ -68,7 +68,9 @@ public class MainFormController implements UserListUpdateCallback {
         String message = textArea.getText();
         textArea.clear();
         User receiver = receiverComboBox.getValue();
-        callback.onSendMessage(receiver.getAddress(), message, false);
+        if (receiver != null) {
+            callback.onSendMessage(receiver.getAddress(), message, false);
+        }
     }
 
 }

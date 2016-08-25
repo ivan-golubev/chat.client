@@ -25,6 +25,11 @@ public class WelcomeFormController {
                 connectPressed();
             }
         });
+        this.userNameLabel.setOnKeyPressed(ke -> {
+            if (ke.getCode().equals(KeyCode.ENTER)) {
+                connectPressed();
+            }
+        });
         this.serverAdressLabel.setOnKeyPressed(ke -> {
             if (ke.getCode().equals(KeyCode.ENTER)) {
                 connectPressed();

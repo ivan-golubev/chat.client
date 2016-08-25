@@ -1,6 +1,8 @@
 package net.ivango.chat.client;
 
 import com.google.gson.JsonSyntaxException;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import net.ivango.chat.client.misc.UserListUpdateCallback;
 import net.ivango.chat.common.JSONMapper;
 import net.ivango.chat.common.misc.HandlerMap;
@@ -17,8 +19,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 public class NetworkController {
 
@@ -27,6 +28,10 @@ public class NetworkController {
     private JSONMapper jsonMapper = new JSONMapper();
 
     private UserListUpdateCallback ulCallback;
+
+    private ExecutorService threadPool = Executors.newSingleThreadScheduledExecutor();
+    private static final int SLEEP_INTERVAL = 5;
+    private static final String MESSAGE_TEMPLATE = "NetworkController background worker thread: %s";
 
     private void registerHandlers(){
         /* registering the read handler */
@@ -43,8 +48,15 @@ public class NetworkController {
         handlerMap.put(GetUsersResponse.class, new MessageHandler<GetUsersResponse>() {
             @Override
             public void onMessageReceived(GetUsersResponse message, String address) {
-                System.out.println("GetUsers response received.");
-                ulCallback.onUserListUpdated( message.getUsers() );
+                System.out.println("GetUsers response received: " + message.getUsers().toString());
+                Task<Void> task = new Task<Void>() {
+                    protected Void call() throws Exception {
+                        ulCallback.onUserListUpdated( message.getUsers() );
+                        return null;
+                    }
+                };
+
+                Platform.runLater(task);
             }
         });
 
@@ -54,6 +66,26 @@ public class NetworkController {
                 System.out.format("Message from %s received: %s.\n", message.getFrom(), message.getMessage());
             }
         });
+
+        Runnable updateUserListTask = () -> {
+            try {
+                while (!Thread.interrupted()) {
+//                        logger.info(String.format(MESSAGE_TEMPLATE, "thread awakened."));
+                    /* fetch users */
+                    sendJSON(new GetUsersRequest());
+
+                    /* wait for a while */
+//                        logger.info(String.format(MESSAGE_TEMPLATE, "thread goes to sleep."));
+                    TimeUnit.SECONDS.sleep(SLEEP_INTERVAL);
+                }
+            } catch (InterruptedException ie) {
+                // That's OK: somebody has stopped the app.
+//                    logger.info(String.format(MESSAGE_TEMPLATE, "thread interrupted."));
+            }
+//                logger.info(String.format(MESSAGE_TEMPLATE, "thread stopped."));
+        };
+
+        threadPool.execute(updateUserListTask);
     }
 
     class Readhandler implements CompletionHandler<Integer, Void> {
@@ -79,8 +111,6 @@ public class NetworkController {
             inputBuffer.get(buffer);
             String json = new String(buffer);
 
-            socketChannel.read(inputBuffer, null, this);
-
             try {
                 Message message = (Message) jsonMapper.fromJson(json);
                 MessageHandler handler = handlerMap.get(message.getClass());
@@ -91,6 +121,8 @@ public class NetworkController {
             } catch (ClassNotFoundException e) {
 //                e.printStackTrace();
             }
+            inputBuffer.clear();
+            socketChannel.read(inputBuffer, null, this);
         }
 
         @Override
@@ -111,6 +143,11 @@ public class NetworkController {
         buffer.clear();
     }
 
+//    public void fetchUserList() {
+//        /* fetch the user list */
+//        sendJSON(new GetUsersRequest());
+//    }
+
     public void initConnection (String userName, String hostname, int port, UserListUpdateCallback ulCallback) throws IOException, ExecutionException, InterruptedException {
         channel = AsynchronousSocketChannel.open();
         Future f = channel.connect(new InetSocketAddress(hostname, port));
@@ -122,10 +159,9 @@ public class NetworkController {
 
         /* perform the login */
         sendJSON(new LoginRequest(userName));
-        /* fetch users */
-        sendJSON(new GetUsersRequest());
 
-
+        /* fetch the user list */
+//        sendJSON(new GetUsersRequest());
 //
 //        System.out.println("Sending messages to server: ");
 //
