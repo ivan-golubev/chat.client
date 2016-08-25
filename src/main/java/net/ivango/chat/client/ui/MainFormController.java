@@ -2,17 +2,19 @@ package net.ivango.chat.client.ui;
 
 
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.util.Callback;
+import net.ivango.chat.client.misc.IncomingMessageCallback;
 import net.ivango.chat.client.misc.SendMessageCallback;
 import net.ivango.chat.client.misc.UserListUpdateCallback;
 import net.ivango.chat.common.responses.User;
 
 import java.util.List;
 
-public class MainFormController implements UserListUpdateCallback {
+public class MainFormController implements UserListUpdateCallback, IncomingMessageCallback {
 
     @FXML
     private Label userNameLabel;
@@ -21,11 +23,15 @@ public class MainFormController implements UserListUpdateCallback {
     @FXML
     private ListView<User> activeUsersList;
     @FXML
+    private ListView<String> messageList;
+    @FXML
     private ComboBox<User> receiverComboBox;
     @FXML
     private TextArea textArea;
 
     private SendMessageCallback callback;
+
+    private ObservableList<String> messages = FXCollections.observableArrayList();
 
     public void initialize (SendMessageCallback callback) {
         this.callback = callback;
@@ -51,6 +57,7 @@ public class MainFormController implements UserListUpdateCallback {
                 }
             }
         );
+        messageList.setItems(messages);
     }
 
     public void fillUserInfo(String userName, String hostname, int port) {
@@ -60,17 +67,31 @@ public class MainFormController implements UserListUpdateCallback {
 
     @Override
     public void onUserListUpdated(List<User> users) {
-        receiverComboBox.setItems(FXCollections.observableList(users));
         activeUsersList.setItems(FXCollections.observableList(users));
+
+        User currentValue = receiverComboBox.getValue();
+        receiverComboBox.setItems(FXCollections.observableList(users));
+        if (currentValue != null && users.contains(currentValue)) {
+            receiverComboBox.setValue(currentValue);
+        }
+    }
+
+    private void addOwnMessage(String message) {
+        messages.add("Me: " + message);
     }
 
     private void sendMessage() {
         String message = textArea.getText();
-        textArea.clear();
         User receiver = receiverComboBox.getValue();
-        if (receiver != null) {
+        if (receiver != null && !message.isEmpty()) {
+            textArea.setText("");
             callback.onSendMessage(receiver.getAddress(), message, false);
+            addOwnMessage(message);
         }
     }
 
+    @Override
+    public void onMessageReceived(String sender, String message, boolean broadcast) {
+        messages.add(sender + ": " + message);
+    }
 }

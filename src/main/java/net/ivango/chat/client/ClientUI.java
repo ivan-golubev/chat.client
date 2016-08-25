@@ -7,6 +7,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
+import net.ivango.chat.client.misc.IncomingMessageCallback;
 import net.ivango.chat.client.misc.SendMessageCallback;
 import net.ivango.chat.client.misc.UserListUpdateCallback;
 import net.ivango.chat.client.misc.WelcomeCallback;
@@ -34,10 +35,12 @@ public class ClientUI extends Application {
             this.primaryStage = primaryStage;
 
             networkController = new NetworkController();
+
             sendMessageCallback = new SendMessageCallback() {
                 @Override
                 public void onSendMessage(String receiver, String message, boolean broadcast) {
-//            System.out.format("Sending message %s to %s.\n", message, receiver);
+                    System.out.format("Sending message %s to %s.\n", message, receiver);
+                    networkController.sendMessage(receiver, message, broadcast);
                 }
             };
 
@@ -66,9 +69,9 @@ public class ClientUI extends Application {
                     @Override
                     protected Void call() throws Exception {
                         try {
-                            UserListUpdateCallback callback = switchToMainLayout(userName, hostname, port);
+                            MainFormController callback = switchToMainLayout(userName, hostname, port);
                             System.out.format("Connecting %s to %s.\n", userName, hostname);
-                            networkController.initConnection(userName, hostname, port, callback);
+                            networkController.initConnection(userName, hostname, port, callback, callback);
 
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -85,7 +88,7 @@ public class ClientUI extends Application {
         }
     };
 
-    private UserListUpdateCallback switchToMainLayout(String userName, String hostname, int port) {
+    private MainFormController switchToMainLayout(String userName, String hostname, int port) {
         try {
             FXMLLoader loader = new FXMLLoader(ClientUI.class.getResource(MAIN_FORM_VIEW_FXML));
             Pane rootLayout = loader.load();

@@ -3,6 +3,7 @@ package net.ivango.chat.client;
 import com.google.gson.JsonSyntaxException;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import net.ivango.chat.client.misc.IncomingMessageCallback;
 import net.ivango.chat.client.misc.UserListUpdateCallback;
 import net.ivango.chat.common.JSONMapper;
 import net.ivango.chat.common.misc.HandlerMap;
@@ -10,6 +11,7 @@ import net.ivango.chat.common.misc.MessageHandler;
 import net.ivango.chat.common.requests.GetUsersRequest;
 import net.ivango.chat.common.requests.LoginRequest;
 import net.ivango.chat.common.requests.Message;
+import net.ivango.chat.common.requests.SendMessageRequest;
 import net.ivango.chat.common.responses.GetTimeResponse;
 import net.ivango.chat.common.responses.GetUsersResponse;
 import net.ivango.chat.common.responses.IncomingMessage;
@@ -28,6 +30,7 @@ public class NetworkController {
     private JSONMapper jsonMapper = new JSONMapper();
 
     private UserListUpdateCallback ulCallback;
+    private IncomingMessageCallback imCallback;
 
     private ExecutorService threadPool = Executors.newSingleThreadScheduledExecutor();
     private static final int SLEEP_INTERVAL = 5;
@@ -45,26 +48,28 @@ public class NetworkController {
             }
         });
 
-        handlerMap.put(GetUsersResponse.class, new MessageHandler<GetUsersResponse>() {
-            @Override
-            public void onMessageReceived(GetUsersResponse message, String address) {
-                System.out.println("GetUsers response received: " + message.getUsers().toString());
-                Task<Void> task = new Task<Void>() {
-                    protected Void call() throws Exception {
-                        ulCallback.onUserListUpdated( message.getUsers() );
-                        return null;
-                    }
-                };
+        handlerMap.put(GetUsersResponse.class, (message, address) -> {
+            System.out.println("GetUsers response received: " + message.getUsers().toString());
+            Task<Void> task = new Task<Void>() {
+                protected Void call() throws Exception {
+                    ulCallback.onUserListUpdated( message.getUsers() );
+                    return null;
+                }
+            };
 
-                Platform.runLater(task);
-            }
+            Platform.runLater(task);
         });
 
-        handlerMap.put(IncomingMessage.class, new MessageHandler<IncomingMessage>() {
-            @Override
-            public void onMessageReceived(IncomingMessage message, String address) {
-                System.out.format("Message from %s received: %s.\n", message.getFrom(), message.getMessage());
-            }
+        handlerMap.put(IncomingMessage.class, (message, address) -> {
+            System.out.format("Message from %s received: %s.\n", message.getFrom(), message.getMessage());
+            Task<Void> task = new Task<Void>() {
+                protected Void call() throws Exception {
+                    imCallback.onMessageReceived(message.getSenderName(), message.getMessage(), message.isBroadcast());
+                    return null;
+                }
+            };
+
+            Platform.runLater(task);
         });
 
         Runnable updateUserListTask = () -> {
@@ -143,18 +148,22 @@ public class NetworkController {
         buffer.clear();
     }
 
-//    public void fetchUserList() {
-//        /* fetch the user list */
-//        sendJSON(new GetUsersRequest());
-//    }
+    public void sendMessage(String receiver, String message, boolean broadcast) {
+        sendJSON(new SendMessageRequest(receiver, message, broadcast));
+    }
 
-    public void initConnection (String userName, String hostname, int port, UserListUpdateCallback ulCallback) throws IOException, ExecutionException, InterruptedException {
+    public void initConnection (String userName,
+                                String hostname,
+                                int port,
+                                UserListUpdateCallback ulCallback,
+                                IncomingMessageCallback imCallback) throws IOException, ExecutionException, InterruptedException {
         channel = AsynchronousSocketChannel.open();
         Future f = channel.connect(new InetSocketAddress(hostname, port));
         f.get();
 
         System.out.println("client has started: " + channel.isOpen());
         this.ulCallback = ulCallback;
+        this.imCallback = imCallback;
         registerHandlers();
 
         /* perform the login */
