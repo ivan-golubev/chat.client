@@ -4,8 +4,8 @@ import com.google.gson.JsonSyntaxException;
 import net.ivango.chat.common.JSONMapper;
 import net.ivango.chat.common.misc.HandlerMap;
 import net.ivango.chat.common.misc.MessageHandler;
+import net.ivango.chat.common.requests.LoginRequest;
 import net.ivango.chat.common.requests.Message;
-import net.ivango.chat.common.requests.SendMessageRequest;
 import net.ivango.chat.common.responses.GetTimeResponse;
 import net.ivango.chat.common.responses.GetUsersResponse;
 import net.ivango.chat.common.responses.IncomingMessage;
@@ -20,8 +20,7 @@ import java.util.concurrent.Future;
 
 public class NetworkController {
 
-
-    public static final int PORT = 8989;
+//    public static final int PORT = 8989;
     private AsynchronousSocketChannel channel;
     private HandlerMap handlerMap = new HandlerMap();
     private JSONMapper jsonMapper = new JSONMapper();
@@ -89,41 +88,57 @@ public class NetworkController {
         }
     }
 
-    public void initConnection () throws IOException, ExecutionException, InterruptedException {
+    private void login(String userName) {
+        /* perform the login */
+        LoginRequest loginRequest = new LoginRequest(userName);
+        String json = jsonMapper.toJSON(loginRequest);
+
+        ByteBuffer buffer = ByteBuffer.wrap(json.getBytes());
+        Future result = channel.write(buffer);
+
+        while ( !result.isDone() ) {
+            System.out.println("... ");
+        }
+        buffer.clear();
+    }
+
+    public void initConnection (String userName, String hostname, int port) throws IOException, ExecutionException, InterruptedException {
         channel = AsynchronousSocketChannel.open();
-        Future f = channel.connect(new InetSocketAddress("localhost", PORT));
+        Future f = channel.connect(new InetSocketAddress(hostname, port));
         f.get();
 
         System.out.println("client has started: " + channel.isOpen());
         registerHandlers();
 
-        /* registering the read handler */
-        ByteBuffer inputBuffer = ByteBuffer.allocate(2048);
-        channel.read(inputBuffer, null, new Readhandler(channel, inputBuffer));
+        login(userName);
 
-        System.out.println("Sending messages to server: ");
-
-        String [] messages = new String [] {"Time goes fast.", "What now?", "Bye."};
-
-        for (String m : messages) {
-
-            Message request = new SendMessageRequest("", m, true);
-            String json = jsonMapper.toJSON(request);
-
-            ByteBuffer buffer = ByteBuffer.wrap(json.getBytes());
-            Future result = channel.write(buffer);
-
-            while ( !result.isDone() ) {
-                System.out.println("... ");
-            }
-
-            System.out.println(m);
-            buffer.clear();
-            Thread.sleep(3000);
-        }
-        Thread.sleep(5000);
-        System.out.println("Closing the connection... ");
-        channel.close();
+//        /* registering the read handler */
+//        ByteBuffer inputBuffer = ByteBuffer.allocate(2048);
+//        channel.read(inputBuffer, null, new Readhandler(channel, inputBuffer));
+//
+//        System.out.println("Sending messages to server: ");
+//
+//        String [] messages = new String [] {"Time goes fast.", "What now?", "Bye."};
+//
+//        for (String m : messages) {
+//
+//            Message request = new SendMessageRequest("", m, true);
+//            String json = jsonMapper.toJSON(request);
+//
+//            ByteBuffer buffer = ByteBuffer.wrap(json.getBytes());
+//            Future result = channel.write(buffer);
+//
+//            while ( !result.isDone() ) {
+//                System.out.println("... ");
+//            }
+//
+//            System.out.println(m);
+//            buffer.clear();
+//            Thread.sleep(3000);
+//        }
+//        Thread.sleep(5000);
+//        System.out.println("Closing the connection... ");
+//        channel.close();
     }
 
 }

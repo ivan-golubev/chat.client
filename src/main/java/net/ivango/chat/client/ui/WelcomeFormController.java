@@ -36,7 +36,12 @@ public class WelcomeFormController {
     public void connectPressed() {
         String userName = userNameLabel.getText();
         String serverAddress = serverAdressLabel.getText();
-        welcomeCallback.onConnectPressed(userName, serverAddress);
+
+        String [] str = serverAddress.split(":");
+        String hostname = str[0];
+        int port = Integer.valueOf(str[1]);
+
+        welcomeCallback.onConnectPressed(userName, hostname, port);
     }
 
 }
