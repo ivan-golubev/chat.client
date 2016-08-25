@@ -1,9 +1,11 @@
 package net.ivango.chat.client;
 
 import com.google.gson.JsonSyntaxException;
+import net.ivango.chat.client.misc.UserListUpdateCallback;
 import net.ivango.chat.common.JSONMapper;
 import net.ivango.chat.common.misc.HandlerMap;
 import net.ivango.chat.common.misc.MessageHandler;
+import net.ivango.chat.common.requests.GetUsersRequest;
 import net.ivango.chat.common.requests.LoginRequest;
 import net.ivango.chat.common.requests.Message;
 import net.ivango.chat.common.responses.GetTimeResponse;
@@ -20,29 +22,35 @@ import java.util.concurrent.Future;
 
 public class NetworkController {
 
-//    public static final int PORT = 8989;
     private AsynchronousSocketChannel channel;
     private HandlerMap handlerMap = new HandlerMap();
     private JSONMapper jsonMapper = new JSONMapper();
 
+    private UserListUpdateCallback ulCallback;
+
     private void registerHandlers(){
+        /* registering the read handler */
+        ByteBuffer inputBuffer = ByteBuffer.allocate(2048);
+        channel.read(inputBuffer, null, new Readhandler(channel, inputBuffer));
+
         handlerMap.put(GetTimeResponse.class, new MessageHandler<GetTimeResponse>() {
             @Override
-            public void onMessageReceived(GetTimeResponse getTimeResponse) {
+            public void onMessageReceived(GetTimeResponse getTimeResponse, String address) {
 
             }
         });
 
         handlerMap.put(GetUsersResponse.class, new MessageHandler<GetUsersResponse>() {
             @Override
-            public void onMessageReceived(GetUsersResponse getUsersResponse) {
-
+            public void onMessageReceived(GetUsersResponse message, String address) {
+                System.out.println("GetUsers response received.");
+                ulCallback.onUserListUpdated( message.getUsers() );
             }
         });
 
         handlerMap.put(IncomingMessage.class, new MessageHandler<IncomingMessage>() {
             @Override
-            public void onMessageReceived(IncomingMessage message) {
+            public void onMessageReceived(IncomingMessage message, String address) {
                 System.out.format("Message from %s received: %s.\n", message.getFrom(), message.getMessage());
             }
         });
@@ -59,27 +67,30 @@ public class NetworkController {
 
         @Override
         public void completed(Integer bytesRead, Void attachment) {
-            byte[] buffer = new byte[bytesRead];
-            inputBuffer.rewind();
-            // Rewind the input buffer to read from the beginning
 
+            if (bytesRead == -1) {
+                System.out.println("EOS received. server disconnected.\n");
+                return;
+            }
+
+            byte[] buffer = new byte[bytesRead];
+            // Rewind the input buffer to read from the beginning
+            inputBuffer.rewind();
             inputBuffer.get(buffer);
             String json = new String(buffer);
-//            System.out.println("Received message from the server: " + message);
 
-            Message message = null;
+            socketChannel.read(inputBuffer, null, this);
+
             try {
-                message = (Message) jsonMapper.fromJson(json);
+                Message message = (Message) jsonMapper.fromJson(json);
                 MessageHandler handler = handlerMap.get(message.getClass());
-                handler.onMessageReceived(message);
+                handler.onMessageReceived(message, null);
 
             } catch (JsonSyntaxException ie) {
 
             } catch (ClassNotFoundException e) {
 //                e.printStackTrace();
             }
-
-            socketChannel.read(inputBuffer, null, this);
         }
 
         @Override
@@ -88,10 +99,8 @@ public class NetworkController {
         }
     }
 
-    private void login(String userName) {
-        /* perform the login */
-        LoginRequest loginRequest = new LoginRequest(userName);
-        String json = jsonMapper.toJSON(loginRequest);
+    private void sendJSON(Message message) {
+        String json = jsonMapper.toJSON(message);
 
         ByteBuffer buffer = ByteBuffer.wrap(json.getBytes());
         Future result = channel.write(buffer);
@@ -102,19 +111,21 @@ public class NetworkController {
         buffer.clear();
     }
 
-    public void initConnection (String userName, String hostname, int port) throws IOException, ExecutionException, InterruptedException {
+    public void initConnection (String userName, String hostname, int port, UserListUpdateCallback ulCallback) throws IOException, ExecutionException, InterruptedException {
         channel = AsynchronousSocketChannel.open();
         Future f = channel.connect(new InetSocketAddress(hostname, port));
         f.get();
 
         System.out.println("client has started: " + channel.isOpen());
+        this.ulCallback = ulCallback;
         registerHandlers();
 
-        login(userName);
+        /* perform the login */
+        sendJSON(new LoginRequest(userName));
+        /* fetch users */
+        sendJSON(new GetUsersRequest());
 
-//        /* registering the read handler */
-//        ByteBuffer inputBuffer = ByteBuffer.allocate(2048);
-//        channel.read(inputBuffer, null, new Readhandler(channel, inputBuffer));
+
 //
 //        System.out.println("Sending messages to server: ");
 //

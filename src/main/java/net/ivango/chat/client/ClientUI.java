@@ -6,6 +6,7 @@ import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import net.ivango.chat.client.misc.SendMessageCallback;
+import net.ivango.chat.client.misc.UserListUpdateCallback;
 import net.ivango.chat.client.misc.WelcomeCallback;
 import net.ivango.chat.client.ui.MainFormController;
 import net.ivango.chat.client.ui.WelcomeFormController;
@@ -41,8 +42,8 @@ public class ClientUI extends Application {
             primaryStage.hide();
             System.out.format("Connecting %s to %s.\n", userName, hostname);
             try {
-                networkController.initConnection(userName, hostname, port);
-                switchToMainLayout(userName, hostname, port);
+                UserListUpdateCallback callback = switchToMainLayout(userName, hostname, port);
+                networkController.initConnection(userName, hostname, port, callback);
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (ExecutionException e) {
@@ -60,7 +61,7 @@ public class ClientUI extends Application {
         }
     };
 
-    private void switchToMainLayout(String userName, String hostname, int port) {
+    private UserListUpdateCallback switchToMainLayout(String userName, String hostname, int port) {
         try {
             FXMLLoader loader = new FXMLLoader(ClientUI.class.getResource(MAIN_FORM_VIEW_FXML));
             Pane rootLayout = loader.load();
@@ -74,9 +75,11 @@ public class ClientUI extends Application {
             MainFormController controller = loader.getController();
             controller.initialize(sendMessageCallback);
             controller.fillUserInfo(userName, hostname, port);
+            return controller;
         } catch (IOException e) {
 //            showErrorDialog("Failed to initialize root layout:", e);
             e.printStackTrace();
+            return null;
         }
     }
 
