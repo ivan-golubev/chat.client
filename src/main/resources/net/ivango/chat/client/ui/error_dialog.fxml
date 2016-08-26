@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+
+<Pane prefHeight="472.0" prefWidth="518.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.ivango.chat.client.ui.ErrorDialogController">
+   <children>
+      <Label layoutX="57.0" layoutY="14.0" text="Something went wrong - the program will close">
+         <font>
+            <Font size="16.0" />
+         </font>
+      </Label>
+      <TextArea fx:id="errorTextArea" editable="false" layoutX="11.0" layoutY="52.0" prefHeight="315.0" prefWidth="493.0" />
+      <Button layoutX="196.0" layoutY="420.0" mnemonicParsing="false" onAction="#close" prefHeight="26.0" prefWidth="92.0" text="OK" />
+      <Label layoutX="33.0" layoutY="384.0" prefHeight="20.0" prefWidth="452.0" text="Contact ivan.golubev.spb@gmail.com to fix the issue">
+         <font>
+            <Font size="16.0" />
+         </font>
+      </Label>
+   </children>
+</Pane>

@@ -3,20 +3,20 @@ package net.ivango.chat.client;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
-import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
-import net.ivango.chat.client.misc.IncomingMessageCallback;
+import net.ivango.chat.client.misc.ErrorDialogCallback;
 import net.ivango.chat.client.misc.SendMessageCallback;
-import net.ivango.chat.client.misc.UserListUpdateCallback;
 import net.ivango.chat.client.misc.WelcomeCallback;
+import net.ivango.chat.client.ui.ErrorDialogController;
 import net.ivango.chat.client.ui.MainFormController;
 import net.ivango.chat.client.ui.WelcomeFormController;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.concurrent.ExecutionException;
 
 import static java.lang.System.out;
@@ -29,7 +29,55 @@ public class ClientUI extends Application {
     private SendMessageCallback sendMessageCallback;
 
     public static final String MAIN_FORM_VIEW_FXML = "ui/main_form.fxml",
-                               WELCOME_FORM_VIEW_FXML = "ui/welcome_form.fxml";
+                               WELCOME_FORM_VIEW_FXML = "ui/welcome_form.fxml",
+                               ERROR_DIALOG = "ui/error_dialog.fxml",
+                               INPUT_VALIDATION_DIALOG = "ui/input_validation_dialog.fxml";
+
+    private ErrorDialogCallback errorDialogCallback = new ErrorDialogCallback() {
+        @Override
+        public void showFailedValidationDialog(String errorMessage) {
+            try {
+                FXMLLoader loader = new FXMLLoader(ClientUI.class.getResource(INPUT_VALIDATION_DIALOG));
+                Pane rootPane = loader.load();
+                ErrorDialogController controller = loader.getController();
+
+                Stage dialog = new Stage();
+                dialog.initModality(Modality.APPLICATION_MODAL);
+                dialog.initOwner(primaryStage);
+                Scene scene = new Scene(rootPane, 520, 180);
+                dialog.setScene(scene);
+                dialog.setResizable(false);
+
+                controller.initialize(dialog, primaryStage, errorMessage);
+                controller.disableClosing();
+
+                dialog.show();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void showErrorDialog(String errorMessage, Exception ex){
+            try {
+                FXMLLoader loader = new FXMLLoader(ClientUI.class.getResource(ERROR_DIALOG));
+                Pane rootPane = loader.load();
+                ErrorDialogController controller = loader.getController();
+
+                Stage dialog = new Stage();
+                dialog.initModality(Modality.APPLICATION_MODAL);
+                dialog.initOwner(primaryStage);
+                Scene scene = new Scene(rootPane, 520, 480);
+                dialog.setScene(scene);
+                dialog.setResizable(false);
+
+                controller.initialize(dialog, primaryStage, errorMessage, ex);
+                dialog.show();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    };
 
     @Override
     public void start(Stage primaryStage) {
@@ -38,13 +86,8 @@ public class ClientUI extends Application {
 
             networkController = new NetworkController();
 
-            sendMessageCallback = new SendMessageCallback() {
-                @Override
-                public void onSendMessage(String receiver, String message, boolean broadcast) {
-//                    System.out.format("Sending message %s to %s.\n", message, receiver);
+            sendMessageCallback = (receiver, message, broadcast) ->
                     networkController.sendMessage(receiver, message, broadcast);
-                }
-            };
 
             primaryStage.setOnCloseRequest(t -> {
                 networkController.onApplicationClose();
@@ -63,7 +106,7 @@ public class ClientUI extends Application {
 
             Platform.runLater( task );
         } catch (Exception e) {
-//            showErrorDialog("Failed to initialize application:", e);
+            errorDialogCallback.showErrorDialog("Failed to initialize the application:", e);
         }
     }
 
@@ -78,16 +121,13 @@ public class ClientUI extends Application {
                         try {
                             MainFormController controller = switchToMainLayout(userName, hostname, port);
                             System.out.format("Connecting %s to %s.\n", userName, hostname);
-                            networkController.initConnection(userName, hostname, port, controller);
+                            networkController.initConnection(userName, hostname, port, controller, errorDialogCallback);
 
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } catch (ExecutionException e) {
-                            e.printStackTrace();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                        } catch (ConnectException ce) {
+                            errorDialogCallback.showErrorDialog("Server is not reachable.", null);
+                        } catch (IOException | ExecutionException | InterruptedException e) {
+                            errorDialogCallback.showErrorDialog("Failed to establish connection to server.", e);
                         }
-
                         return null;
                     }
                 };
@@ -111,8 +151,7 @@ public class ClientUI extends Application {
             controller.fillUserInfo(userName, hostname, port);
             return controller;
         } catch (IOException e) {
-//            showErrorDialog("Failed to initialize root layout:", e);
-            e.printStackTrace();
+            errorDialogCallback.showErrorDialog("Failed to initialize root layout:", e);
             return null;
         }
     }
@@ -123,7 +162,6 @@ public class ClientUI extends Application {
             Pane rootLayout = loader.load();
 
             Scene scene = new Scene(rootLayout);
-//            scene.getStylesheets().addAll(Main.class.getResource(STYLES_MAIN_CSS).toExternalForm());
 
             primaryStage.setTitle("Welcome to chat");
             primaryStage.setScene(scene);
@@ -131,18 +169,14 @@ public class ClientUI extends Application {
             primaryStage.show();
 
             WelcomeFormController controller = loader.getController();
-            controller.initialize(welcomeCallback);
-
-//            controller.setMainApp(this, rootPath);
+            controller.initialize(welcomeCallback, errorDialogCallback);
         } catch (IOException e) {
-//            showErrorDialog("Failed to initialize root layout:", e);
+            errorDialogCallback.showErrorDialog("Failed to initialize root layout:", e);
             e.printStackTrace();
         }
     }
 
-
-
-    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
+    public static void main(String[] args) {
         launch();
     }
 }

@@ -3,6 +3,7 @@ package net.ivango.chat.client;
 import com.google.gson.JsonSyntaxException;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import net.ivango.chat.client.misc.ErrorDialogCallback;
 import net.ivango.chat.client.misc.IncomingMessageCallback;
 import net.ivango.chat.client.misc.ServerTimeMessageCallback;
 import net.ivango.chat.client.misc.UserListUpdateCallback;
@@ -31,6 +32,7 @@ public class NetworkController {
     private UserListUpdateCallback ulCallback;
     private IncomingMessageCallback imCallback;
     private ServerTimeMessageCallback stCallback;
+    private ErrorDialogCallback errorDialogCallback;
 
     private ExecutorService threadPool = Executors.newSingleThreadScheduledExecutor();
     private static final int SLEEP_INTERVAL = 5;
@@ -126,9 +128,9 @@ public class NetworkController {
                 handler.onMessageReceived(message, null);
 
             } catch (JsonSyntaxException ie) {
-
+                errorDialogCallback.showErrorDialog("Failed to parse the input JSON", ie);
             } catch (ClassNotFoundException e) {
-//                e.printStackTrace();
+                errorDialogCallback.showErrorDialog("Failed to map the input JSON, class not found", e);
             }
             inputBuffer.clear();
             socketChannel.read(inputBuffer, null, this);
@@ -136,7 +138,7 @@ public class NetworkController {
 
         @Override
         public void failed(Throwable exc, Void attachment) {
-
+            System.out.println("Failed to read the input message.");
         }
     }
 
@@ -168,7 +170,8 @@ public class NetworkController {
     public void initConnection (String userName,
                                 String hostname,
                                 int port,
-                                MainFormController controller) throws IOException, ExecutionException, InterruptedException {
+                                MainFormController controller,
+                                ErrorDialogCallback errorDialogCallback) throws IOException, ExecutionException, InterruptedException {
         channel = AsynchronousSocketChannel.open();
         Future f = channel.connect(new InetSocketAddress(hostname, port));
         f.get();
@@ -177,6 +180,7 @@ public class NetworkController {
         this.ulCallback = controller;
         this.imCallback = controller;
         this.stCallback = controller;
+        this.errorDialogCallback = errorDialogCallback;
         registerHandlers();
 
         /* perform the login */
@@ -184,33 +188,6 @@ public class NetworkController {
 
         /* request the server time */
         sendJSON(new GetTimeRequest());
-
-        /* fetch the user list */
-//        sendJSON(new GetUsersRequest());
-//
-//        System.out.println("Sending messages to server: ");
-//
-//        String [] messages = new String [] {"Time goes fast.", "What now?", "Bye."};
-//
-//        for (String m : messages) {
-//
-//            Message request = new SendMessageRequest("", m, true);
-//            String json = jsonMapper.toJSON(request);
-//
-//            ByteBuffer buffer = ByteBuffer.wrap(json.getBytes());
-//            Future result = channel.write(buffer);
-//
-//            while ( !result.isDone() ) {
-//                System.out.println("... ");
-//            }
-//
-//            System.out.println(m);
-//            buffer.clear();
-//            Thread.sleep(3000);
-//        }
-//        Thread.sleep(5000);
-//        System.out.println("Closing the connection... ");
-//        channel.close();
     }
 
 }

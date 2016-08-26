@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import java.lang.*?>
+<?import javafx.scene.layout.*?>
+
+
+<Pane fx:controller="net.ivango.chat.client.ui.ErrorDialogController"
+      xmlns:fx="http://javafx.com/fxml" xmlns="http://javafx.com/javafx/8.0.40" prefHeight="250.0" prefWidth="518.0">
+   <children>
+      <Label layoutX="157.0" layoutY="14.0" text="Input validation failed">
+         <font>
+            <Font size="16.0" />
+         </font>
+      </Label>
+      <TextArea fx:id="errorTextArea" layoutX="11.0" layoutY="52.0" prefHeight="60.0" prefWidth="493.0" editable="false"/>
+      <Button layoutX="220.0" layoutY="130.0" onAction="#close" mnemonicParsing="false" text="OK" />
+   </children>
+</Pane>
