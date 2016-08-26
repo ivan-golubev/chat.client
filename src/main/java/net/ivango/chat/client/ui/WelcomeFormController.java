@@ -12,6 +12,9 @@ import net.ivango.chat.client.misc.WelcomeCallback;
 
 import java.net.InetSocketAddress;
 
+/**
+ * Controller used by the welcome UI form.
+ * */
 public class WelcomeFormController {
 
     @FXML
@@ -24,7 +27,11 @@ public class WelcomeFormController {
     private WelcomeCallback welcomeCallback;
     private ErrorDialogCallback errorDialogCallback;
 
+    /**
+     * Initializes the user interface.
+     * */
     public void initialize(WelcomeCallback welcomeCallback, ErrorDialogCallback errorDialogCallback) {
+        /* configure handlers and save callbacks */
         this.welcomeCallback = welcomeCallback;
         this.errorDialogCallback = errorDialogCallback;
         this.connectButton.setOnKeyPressed(ke -> {
@@ -44,6 +51,11 @@ public class WelcomeFormController {
         });
     }
 
+    /**
+     * Validates the input.
+     * If input is correct – forwards the data to the network controller.
+     * Else - shows an error dialogue.
+     **/
     @FXML
     public void connectPressed() {
         /* performing the input validation */
@@ -68,6 +80,7 @@ public class WelcomeFormController {
             String [] str = serverAddress.split(":");
             hostname = str[0];
             port = Integer.valueOf(str[1]);
+            /* checking if the address is correct */
             InetSocketAddress address = new InetSocketAddress(hostname, port);
             if (address.isUnresolved()) {
                 errorMessage += "Server is not reachable.\n";
@@ -79,6 +92,7 @@ public class WelcomeFormController {
         }
 
         if ( validInput ) {
+            /* forward the input to the network controller */
             welcomeCallback.onConnectPressed(userName, hostname, port);
         } else {
             /* Show error dialogue */

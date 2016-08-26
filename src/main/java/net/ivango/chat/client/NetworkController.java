@@ -23,21 +23,34 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.*;
 
+/**
+ * Network controller responsible for:
+ * 1. sending/ receiving the messages over the socket channel.
+ * 2. notifying the UI upon new events.
+ * */
 public class NetworkController {
 
+    /** channel used to communicate with the server */
     private AsynchronousSocketChannel channel;
+    /** the map stores message->handler mappings  */
     private HandlerMap handlerMap = new HandlerMap();
+    /* mapper used to convert Messages to JSON and back */
     private JSONMapper jsonMapper = new JSONMapper();
 
+    /** callbacks used to notify the UI  */
     private UserListUpdateCallback ulCallback;
     private IncomingMessageCallback imCallback;
     private ServerTimeMessageCallback stCallback;
     private ErrorDialogCallback errorDialogCallback;
 
+    /** thread pool user to perform the background polling requests */
     private ExecutorService threadPool = Executors.newSingleThreadScheduledExecutor();
     private static final int SLEEP_INTERVAL = 5;
     private static final String MESSAGE_TEMPLATE = "NetworkController background worker thread: %s";
 
+    /**
+     * Registers the incoming message handlers and starts the background thread.
+     * */
     private void registerHandlers(){
         /* registering the read handler */
         ByteBuffer inputBuffer = ByteBuffer.allocate(2048);
@@ -50,7 +63,6 @@ public class NetworkController {
                     return null;
                 }
             };
-
             Platform.runLater(task);
         });
 
@@ -62,7 +74,6 @@ public class NetworkController {
                     return null;
                 }
             };
-
             Platform.runLater(task);
         });
 
@@ -74,7 +85,6 @@ public class NetworkController {
                     return null;
                 }
             };
-
             Platform.runLater(task);
         });
 
@@ -99,7 +109,10 @@ public class NetworkController {
         threadPool.execute(updateUserListTask);
     }
 
-    class Readhandler implements CompletionHandler<Integer, Void> {
+    /**
+     * Handler to read the input messages.
+     * */
+    private class Readhandler implements CompletionHandler<Integer, Void> {
         private AsynchronousSocketChannel socketChannel;
         private ByteBuffer inputBuffer;
 
@@ -110,7 +123,6 @@ public class NetworkController {
 
         @Override
         public void completed(Integer bytesRead, Void attachment) {
-
             if (bytesRead == -1) {
                 errorDialogCallback.showErrorDialog("Server disconnected. The program will close.\n", null);
                 return;
@@ -123,7 +135,9 @@ public class NetworkController {
             String json = new String(buffer);
 
             try {
+                /* map json to an object */
                 Message message = (Message) jsonMapper.fromJson(json);
+                /* route the message to the corresponding handler */
                 MessageHandler handler = handlerMap.get(message.getClass());
                 handler.onMessageReceived(message, null);
 
@@ -142,6 +156,9 @@ public class NetworkController {
         }
     }
 
+    /**
+     * Maps the message object to JSON and sends it over the wire to the server.
+     * */
     private void sendJSON(Message message) {
         String json = jsonMapper.toJSON(message);
 
@@ -154,10 +171,16 @@ public class NetworkController {
         buffer.clear();
     }
 
+    /**
+     * Sends the message to the server.
+     * */
     public void sendMessage(String receiver, String message, boolean broadcast) {
         sendJSON(new SendMessageRequest(receiver, message, broadcast));
     }
 
+    /**
+     * Closes the socket channel and terminate the thread pool.
+     * */
     public void onApplicationClose() {
         try {
             threadPool.shutdownNow();
@@ -167,6 +190,10 @@ public class NetworkController {
         }
     }
 
+    /**
+     * Initializes the connection with server.
+     * Inits the login and get time requests.
+     * */
     public void initConnection (String userName,
                                 String hostname,
                                 int port,
@@ -176,7 +203,7 @@ public class NetworkController {
         Future f = channel.connect(new InetSocketAddress(hostname, port));
         f.get();
 
-        System.out.println("client has started: " + channel.isOpen());
+//        System.out.println("client has started: " + channel.isOpen());
         this.ulCallback = controller;
         this.imCallback = controller;
         this.stCallback = controller;
