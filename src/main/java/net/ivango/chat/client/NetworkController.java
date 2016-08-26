@@ -4,14 +4,13 @@ import com.google.gson.JsonSyntaxException;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import net.ivango.chat.client.misc.IncomingMessageCallback;
+import net.ivango.chat.client.misc.ServerTimeMessageCallback;
 import net.ivango.chat.client.misc.UserListUpdateCallback;
+import net.ivango.chat.client.ui.MainFormController;
 import net.ivango.chat.common.JSONMapper;
 import net.ivango.chat.common.misc.HandlerMap;
 import net.ivango.chat.common.misc.MessageHandler;
-import net.ivango.chat.common.requests.GetUsersRequest;
-import net.ivango.chat.common.requests.LoginRequest;
-import net.ivango.chat.common.requests.Message;
-import net.ivango.chat.common.requests.SendMessageRequest;
+import net.ivango.chat.common.requests.*;
 import net.ivango.chat.common.responses.GetTimeResponse;
 import net.ivango.chat.common.responses.GetUsersResponse;
 import net.ivango.chat.common.responses.IncomingMessage;
@@ -31,6 +30,7 @@ public class NetworkController {
 
     private UserListUpdateCallback ulCallback;
     private IncomingMessageCallback imCallback;
+    private ServerTimeMessageCallback stCallback;
 
     private ExecutorService threadPool = Executors.newSingleThreadScheduledExecutor();
     private static final int SLEEP_INTERVAL = 5;
@@ -41,11 +41,15 @@ public class NetworkController {
         ByteBuffer inputBuffer = ByteBuffer.allocate(2048);
         channel.read(inputBuffer, null, new Readhandler(channel, inputBuffer));
 
-        handlerMap.put(GetTimeResponse.class, new MessageHandler<GetTimeResponse>() {
-            @Override
-            public void onMessageReceived(GetTimeResponse getTimeResponse, String address) {
+        handlerMap.put(GetTimeResponse.class, (getTimeResponse, address) -> {
+            Task<Void> task = new Task<Void>() {
+                protected Void call() throws Exception {
+                    stCallback.onServerTimeReceived( getTimeResponse.getUtcServerTime() );
+                    return null;
+                }
+            };
 
-            }
+            Platform.runLater(task);
         });
 
         handlerMap.put(GetUsersResponse.class, (message, address) -> {
@@ -164,19 +168,22 @@ public class NetworkController {
     public void initConnection (String userName,
                                 String hostname,
                                 int port,
-                                UserListUpdateCallback ulCallback,
-                                IncomingMessageCallback imCallback) throws IOException, ExecutionException, InterruptedException {
+                                MainFormController controller) throws IOException, ExecutionException, InterruptedException {
         channel = AsynchronousSocketChannel.open();
         Future f = channel.connect(new InetSocketAddress(hostname, port));
         f.get();
 
         System.out.println("client has started: " + channel.isOpen());
-        this.ulCallback = ulCallback;
-        this.imCallback = imCallback;
+        this.ulCallback = controller;
+        this.imCallback = controller;
+        this.stCallback = controller;
         registerHandlers();
 
         /* perform the login */
         sendJSON(new LoginRequest(userName));
+
+        /* request the server time */
+        sendJSON(new GetTimeRequest());
 
         /* fetch the user list */
 //        sendJSON(new GetUsersRequest());

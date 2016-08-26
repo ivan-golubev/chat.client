@@ -9,18 +9,22 @@ import javafx.scene.input.KeyCode;
 import javafx.util.Callback;
 import net.ivango.chat.client.misc.IncomingMessageCallback;
 import net.ivango.chat.client.misc.SendMessageCallback;
+import net.ivango.chat.client.misc.ServerTimeMessageCallback;
 import net.ivango.chat.client.misc.UserListUpdateCallback;
+import net.ivango.chat.common.responses.BroadCastUser;
 import net.ivango.chat.common.responses.User;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
-public class MainFormController implements UserListUpdateCallback, IncomingMessageCallback {
+public class MainFormController implements UserListUpdateCallback, IncomingMessageCallback, ServerTimeMessageCallback {
 
     @FXML
     private Label userNameLabel;
     @FXML
     private Label serverAdressLabel;
+    @FXML
+    private Label serverTime;
     @FXML
     private ListView<User> activeUsersList;
     @FXML
@@ -34,11 +38,7 @@ public class MainFormController implements UserListUpdateCallback, IncomingMessa
 
     private ObservableList<String> messages = FXCollections.observableArrayList();
 
-    private class BroadCastUser extends User {
-        private BroadCastUser() {
-            super("Everyone", "255.255.255.255");
-        }
-    }
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm, dd MMM yy");
 
     public void initialize (SendMessageCallback callback) {
         this.callback = callback;
@@ -75,13 +75,17 @@ public class MainFormController implements UserListUpdateCallback, IncomingMessa
 
     @Override
     public void onUserListUpdated(List<User> users) {
+        Collections.sort(users, (o1, o2) -> o1.getUserName().compareTo(o2.getUserName()));
+
         activeUsersList.setItems(FXCollections.observableList(users));
 
         User currentValue = receiverComboBox.getValue();
-        ObservableList<User> observable = FXCollections.observableList(new ArrayList<>(users));
-        observable.add(new BroadCastUser());
-        receiverComboBox.setItems(observable);
-        if (currentValue != null && users.contains(currentValue)) {
+        ArrayList<User> receiverList = new ArrayList<>(users);
+        receiverList.add(BroadCastUser.INSTANCE);
+        Collections.sort(receiverList, (o1, o2) -> o1.getUserName().compareTo(o2.getUserName()));
+
+        receiverComboBox.setItems(FXCollections.observableList(receiverList));
+        if (currentValue != null && receiverList.contains(currentValue)) {
             receiverComboBox.setValue(currentValue);
         }
     }
@@ -119,5 +123,10 @@ public class MainFormController implements UserListUpdateCallback, IncomingMessa
         } else {
             messages.add(sender + ": " + message);
         }
+    }
+
+    @Override
+    public void onServerTimeReceived(long utcTimestamp) {
+        serverTime.setText(dateFormat.format(new Date(utcTimestamp)));
     }
 }

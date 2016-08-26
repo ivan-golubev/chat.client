@@ -76,9 +76,9 @@ public class ClientUI extends Application {
                     @Override
                     protected Void call() throws Exception {
                         try {
-                            MainFormController callback = switchToMainLayout(userName, hostname, port);
+                            MainFormController controller = switchToMainLayout(userName, hostname, port);
                             System.out.format("Connecting %s to %s.\n", userName, hostname);
-                            networkController.initConnection(userName, hostname, port, callback, callback);
+                            networkController.initConnection(userName, hostname, port, controller);
 
                         } catch (IOException e) {
                             e.printStackTrace();
