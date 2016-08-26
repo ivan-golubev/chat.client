@@ -15,12 +15,12 @@ import net.ivango.chat.client.misc.WelcomeCallback;
 import net.ivango.chat.client.ui.ErrorDialogController;
 import net.ivango.chat.client.ui.MainFormController;
 import net.ivango.chat.client.ui.WelcomeFormController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.concurrent.ExecutionException;
-
-import static java.lang.System.out;
 
 /**
  * Main class of the application:
@@ -33,6 +33,8 @@ public class ClientUI extends Application {
     private Stage primaryStage;
     private NetworkController networkController;
     private SendMessageCallback sendMessageCallback;
+
+    private static Logger logger = LoggerFactory.getLogger(ClientUI.class);
 
     /** JAVA FX2 UI resources */
     public static final String MAIN_FORM_VIEW_FXML      = "ui/main_form.fxml",
@@ -74,7 +76,7 @@ public class ClientUI extends Application {
 
                         dialog.show();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        logger.error("Error during the error dialogue showing", e);
                     }
                     return null;
                 }
@@ -101,7 +103,7 @@ public class ClientUI extends Application {
                         controller.initialize(closeAppCallback, dialog, primaryStage, errorMessage, ex);
                         dialog.show();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        logger.error("Error during the error dialogue showing", e);
                     }
                     return null;
                 }
@@ -126,7 +128,7 @@ public class ClientUI extends Application {
                 closeAppCallback.closeApp();
             });
 
-            out.println("Initializing the layout ...");
+            logger.debug("Initializing the layout ...");
             Task<Void> task = new Task<Void>(){
                 protected Void call() throws Exception {
                     showWelcomeDialogue();
@@ -136,6 +138,7 @@ public class ClientUI extends Application {
             /* draw the main stage */
             Platform.runLater( task );
         } catch (Exception e) {
+            logger.error("Failed to initialize the application:", e);
             errorDialogCallback.showErrorDialog("Failed to initialize the application:", e);
         }
     }
@@ -152,7 +155,7 @@ public class ClientUI extends Application {
                         primaryStage.hide();
                         /* show the main panel */
                         MainFormController controller = switchToMainLayout(userName, hostname, port);
-                        System.out.format("Connecting %s to %s.\n", userName, hostname);
+                        logger.info("Connecting " + userName + " to " + hostname);
                         /* establish a connection to server and perform initial requests */
                         networkController.initConnection(userName, hostname, port, controller, errorDialogCallback);
                     } catch (ConnectException ce) {
@@ -160,6 +163,7 @@ public class ClientUI extends Application {
                     } catch (IOException | ExecutionException | InterruptedException e) {
                         String errorMessage = "Failed to establish connection to server.\n"
                                 + "Check the address and whether server is up and running.";
+                        logger.error(errorMessage, e);
                         errorDialogCallback.showErrorDialog(errorMessage, null);
                     }
                     return null;
@@ -188,7 +192,8 @@ public class ClientUI extends Application {
             controller.fillUserInfo(userName, hostname, port);
             return controller;
         } catch (IOException e) {
-            errorDialogCallback.showErrorDialog("Failed to initialize root layout:", e);
+            logger.error("Failed to initialize the layout:", e);
+            errorDialogCallback.showErrorDialog("Failed to initialize the layout:", e);
             return null;
         }
     }
@@ -211,8 +216,8 @@ public class ClientUI extends Application {
             WelcomeFormController controller = loader.getController();
             controller.initialize(welcomeCallback, errorDialogCallback);
         } catch (IOException e) {
-            errorDialogCallback.showErrorDialog("Failed to initialize root layout:", e);
-            e.printStackTrace();
+            logger.error("Failed to initialize the layout:", e);
+            errorDialogCallback.showErrorDialog("Failed to initialize the layout:", e);
         }
     }
 

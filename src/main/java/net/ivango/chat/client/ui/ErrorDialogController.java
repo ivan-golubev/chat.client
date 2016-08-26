@@ -57,10 +57,10 @@ public class ErrorDialogController {
      * */
     public void disableClosing() { exitOnClose = false; }
 
-    @FXML
     /**
      * Fire the application closing event.
      * */
+    @FXML
     public void close() {
         if (exitOnClose) { closeAppCallback.closeApp(); }
         else { dialog.hide(); }

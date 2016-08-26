@@ -15,6 +15,8 @@ import net.ivango.chat.common.requests.*;
 import net.ivango.chat.common.responses.GetTimeResponse;
 import net.ivango.chat.common.responses.GetUsersResponse;
 import net.ivango.chat.common.responses.IncomingMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -48,6 +50,8 @@ public class NetworkController {
     private static final int SLEEP_INTERVAL = 5;
     private static final String MESSAGE_TEMPLATE = "NetworkController background worker thread: %s";
 
+    private static Logger logger = LoggerFactory.getLogger(NetworkController.class);
+
     /**
      * Registers the incoming message handlers and starts the background thread.
      * */
@@ -67,7 +71,7 @@ public class NetworkController {
         });
 
         handlerMap.put(GetUsersResponse.class, (message, address) -> {
-            System.out.println("GetUsers response received: " + message.getUsers().toString());
+            logger.debug("GetUsers response received: " + message.getUsers().toString());
             Task<Void> task = new Task<Void>() {
                 protected Void call() throws Exception {
                     ulCallback.onUserListUpdated( message.getUsers() );
@@ -78,7 +82,7 @@ public class NetworkController {
         });
 
         handlerMap.put(IncomingMessage.class, (message, address) -> {
-            System.out.format("Message from %s received: %s.\n", message.getFrom(), message.getMessage());
+            logger.debug("Message from %s received: %s.\n", message.getFrom(), message.getMessage());
             Task<Void> task = new Task<Void>() {
                 protected Void call() throws Exception {
                     imCallback.onMessageReceived(message.getSenderName(), message.getMessage(), message.isBroadcast());
@@ -91,19 +95,19 @@ public class NetworkController {
         Runnable updateUserListTask = () -> {
             try {
                 while (!Thread.interrupted()) {
-//                        logger.info(String.format(MESSAGE_TEMPLATE, "thread awakened."));
+                    logger.debug(String.format(MESSAGE_TEMPLATE, "thread awakened."));
                     /* fetch users */
                     sendJSON(new GetUsersRequest());
 
                     /* wait for a while */
-//                        logger.info(String.format(MESSAGE_TEMPLATE, "thread goes to sleep."));
+                    logger.debug(String.format(MESSAGE_TEMPLATE, "thread goes to sleep."));
                     TimeUnit.SECONDS.sleep(SLEEP_INTERVAL);
                 }
             } catch (InterruptedException ie) {
                 // That's OK: somebody has stopped the app.
-//                    logger.info(String.format(MESSAGE_TEMPLATE, "thread interrupted."));
+                logger.info(String.format(MESSAGE_TEMPLATE, "thread interrupted."));
             }
-//                logger.info(String.format(MESSAGE_TEMPLATE, "thread stopped."));
+            logger.info(String.format(MESSAGE_TEMPLATE, "thread stopped."));
         };
 
         threadPool.execute(updateUserListTask);
@@ -142,8 +146,10 @@ public class NetworkController {
                 handler.onMessageReceived(message, null);
 
             } catch (JsonSyntaxException ie) {
+                logger.error("Failed to parse the input JSON", ie);
                 errorDialogCallback.showErrorDialog("Failed to parse the input JSON", ie);
             } catch (ClassNotFoundException e) {
+                logger.error("Failed to map the input JSON, class not found", e);
                 errorDialogCallback.showErrorDialog("Failed to map the input JSON, class not found", e);
             }
             inputBuffer.clear();
@@ -152,7 +158,7 @@ public class NetworkController {
 
         @Override
         public void failed(Throwable exc, Void attachment) {
-            System.out.println("Failed to read the input message.");
+            logger.warn("Failed to read the input message.");
         }
     }
 
@@ -166,7 +172,7 @@ public class NetworkController {
         Future result = channel.write(buffer);
 
         while ( !result.isDone() ) {
-            System.out.println("... ");
+            logger.debug("... ");
         }
         buffer.clear();
     }
@@ -184,9 +190,11 @@ public class NetworkController {
     public void onApplicationClose() {
         try {
             threadPool.shutdownNow();
-            channel.close();
+            if (channel != null && channel.isOpen()) {
+                channel.close();
+            }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Error during the app exit", e);
         }
     }
 
@@ -203,7 +211,7 @@ public class NetworkController {
         Future f = channel.connect(new InetSocketAddress(hostname, port));
         f.get();
 
-//        System.out.println("client has started: " + channel.isOpen());
+        logger.debug("Client has started: " + channel.isOpen());
         this.ulCallback = controller;
         this.imCallback = controller;
         this.stCallback = controller;

@@ -62,7 +62,10 @@ public class MainFormController implements UserListUpdateCallback, IncomingMessa
                         @Override
                         public void updateItem(User item, boolean empty) {
                             super.updateItem(item, empty);
-                            if (item != null) {
+                            if (empty) {
+                                setText(null);
+                                setGraphic(null);
+                            } else {
                                 setText(item.getUserName() + " " + item.getAddress());
                             }
                         }
