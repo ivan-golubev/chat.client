@@ -16,6 +16,7 @@ execute this in console (cd to the project root directory first) or in you favou
 To run the app execute this in the terminal:
 
 `> cd build\libs\`
+
 `> java -jar chat.client-1.0.jar`
 
 [1]: https://github.com/ivan-golubev/chat.server
