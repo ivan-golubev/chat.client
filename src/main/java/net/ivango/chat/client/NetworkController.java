@@ -112,7 +112,7 @@ public class NetworkController {
         public void completed(Integer bytesRead, Void attachment) {
 
             if (bytesRead == -1) {
-                System.out.println("EOS received. server disconnected.\n");
+                errorDialogCallback.showErrorDialog("Server disconnected. The program will close.\n", null);
                 return;
             }
 

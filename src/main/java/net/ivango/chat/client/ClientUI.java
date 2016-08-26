@@ -36,47 +36,64 @@ public class ClientUI extends Application {
     private ErrorDialogCallback errorDialogCallback = new ErrorDialogCallback() {
         @Override
         public void showFailedValidationDialog(String errorMessage) {
-            try {
-                FXMLLoader loader = new FXMLLoader(ClientUI.class.getResource(INPUT_VALIDATION_DIALOG));
-                Pane rootPane = loader.load();
-                ErrorDialogController controller = loader.getController();
+            Task<Void> task = new Task<Void>() {
+                @Override
+                protected Void call() throws Exception {
+                    try {
+                        FXMLLoader loader = new FXMLLoader(ClientUI.class.getResource(INPUT_VALIDATION_DIALOG));
+                        Pane rootPane = loader.load();
+                        ErrorDialogController controller = loader.getController();
 
-                Stage dialog = new Stage();
-                dialog.initModality(Modality.APPLICATION_MODAL);
-                dialog.initOwner(primaryStage);
-                Scene scene = new Scene(rootPane, 520, 180);
-                dialog.setScene(scene);
-                dialog.setResizable(false);
+                        Stage dialog = new Stage();
+                        dialog.initModality(Modality.APPLICATION_MODAL);
+                        dialog.initOwner(primaryStage);
+                        Scene scene = new Scene(rootPane, 520, 180);
+                        dialog.setScene(scene);
+                        dialog.setResizable(false);
 
-                controller.initialize(dialog, primaryStage, errorMessage);
-                controller.disableClosing();
+                        controller.initialize(dialog, primaryStage, errorMessage);
+                        controller.disableClosing();
 
-                dialog.show();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+                        dialog.show();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                }
+            };
+
+            Platform.runLater( task );
         }
 
         @Override
         public void showErrorDialog(String errorMessage, Exception ex){
-            try {
-                FXMLLoader loader = new FXMLLoader(ClientUI.class.getResource(ERROR_DIALOG));
-                Pane rootPane = loader.load();
-                ErrorDialogController controller = loader.getController();
+            Task<Void> task = new Task<Void>() {
+                @Override
+                protected Void call() throws Exception {
+                    try {
+                        FXMLLoader loader = new FXMLLoader(ClientUI.class.getResource(ERROR_DIALOG));
+                        Pane rootPane = loader.load();
+                        ErrorDialogController controller = loader.getController();
 
-                Stage dialog = new Stage();
-                dialog.initModality(Modality.APPLICATION_MODAL);
-                dialog.initOwner(primaryStage);
-                Scene scene = new Scene(rootPane, 520, 480);
-                dialog.setScene(scene);
-                dialog.setResizable(false);
+                        Stage dialog = new Stage();
+                        dialog.initModality(Modality.APPLICATION_MODAL);
+                        dialog.initOwner(primaryStage);
+                        Scene scene = new Scene(rootPane, 520, 480);
+                        dialog.setScene(scene);
+                        dialog.setResizable(false);
 
-                controller.initialize(dialog, primaryStage, errorMessage, ex);
-                dialog.show();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+                        controller.initialize(dialog, primaryStage, errorMessage, ex);
+                        dialog.show();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                }
+            };
+
+            Platform.runLater( task );
         }
+
     };
 
     @Override
