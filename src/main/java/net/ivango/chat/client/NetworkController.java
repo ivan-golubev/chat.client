@@ -24,6 +24,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Network controller responsible for:
@@ -44,6 +46,8 @@ public class NetworkController {
     private IncomingMessageCallback imCallback;
     private ServerTimeMessageCallback stCallback;
     private ErrorDialogCallback errorDialogCallback;
+
+    private Lock writeLock = new ReentrantLock();
 
     /** thread pool user to perform the background polling requests */
     private ExecutorService threadPool = Executors.newSingleThreadScheduledExecutor();
@@ -168,13 +172,18 @@ public class NetworkController {
     private void sendJSON(Message message) {
         String json = jsonMapper.toJSON(message);
 
-        ByteBuffer buffer = ByteBuffer.wrap(json.getBytes());
-        Future result = channel.write(buffer);
-
-        while ( !result.isDone() ) {
-            logger.debug("... ");
+        try {
+            writeLock.lock();
+            ByteBuffer buffer = ByteBuffer.wrap(json.getBytes());
+            channel.write(buffer).get();
+            buffer.clear();
+        } catch (InterruptedException e) {
+            logger.info("Message sending interrupted.");
+        } catch (ExecutionException e) {
+            logger.warn("Other error during the message sending", e);
+        } finally {
+            writeLock.unlock();
         }
-        buffer.clear();
     }
 
     /**
