@@ -19,4 +19,8 @@ To run the app execute this in the terminal:
 
 `> java -jar chat.client-1.0.jar`
 
+Extending the system with new message types (commands)
+-----------------------------------------------------
+Go to the [chat.common][5] project for more details.
+
 [1]: https://github.com/ivan-golubev/chat.server
